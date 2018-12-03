@@ -27,11 +27,11 @@ mcfly.storage module
     :members:
     :undoc-members:
     :show-inheritance:
+    
+mcfly.modelviz module
+---------------------------------
 
-mcfly.tutorial_pamap2 module
-----------------------------
-
-.. automodule:: mcfly.tutorial_pamap2
+.. automodule:: mcfly.modelviz
     :members:
     :undoc-members:
     :show-inheritance:
