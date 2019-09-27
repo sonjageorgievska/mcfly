@@ -1,31 +1,14 @@
-#
-# mcfly
-#
-# Copyright 2017 Netherlands eScience Center
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-
 """
  Summary:
  This module provides the main functionality of mcfly: searching for an
  optimal model architecture. The work flow is as follows:
  Function generate_models from modelgen.py generates and compiles models.
  Function train_models_on_samples trains those models.
+ Function plotTrainingProcess plots the training process.
  Function find_best_architecture is wrapper function that combines
  these steps.
  Example function calls can be found in the tutorial notebook
- (https://github.com/NLeSC/mcfly-tutorial)
+ 'EvaluateDifferentModels.ipynb'.
 """
 import numpy as np
 from . import modelgen
@@ -37,7 +20,7 @@ from keras.callbacks import EarlyStopping
 from keras import metrics
 
 
-def train_models_on_samples(X_train, y_train, X_val, y_val, models,
+def train_models_on_samples(X_train, y_train, X_val, y_val, models, class_weight, 
                             nr_epochs=5, subset_size=100, verbose=True, outputfile=None,
                             model_path=None, early_stopping=False,
                             batch_size=20, metric='accuracy'):
@@ -110,7 +93,8 @@ def train_models_on_samples(X_train, y_train, X_val, y_val, models,
                             # see comment on subsize_set
                             validation_data=(X_val, y_val),
                             verbose=verbose,
-                            callbacks=callbacks)
+                            callbacks=callbacks,
+                            class_weight=class_weight)
         histories.append(history)
 
         val_metrics.append(history.history['val_' + metric_name][-1])

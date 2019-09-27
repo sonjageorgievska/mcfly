@@ -1,35 +1,17 @@
-#
-# mcfly
-#
-# Copyright 2017 Netherlands eScience Center
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Convolution1D, Lambda, \
     Convolution2D, Flatten, \
-    Reshape, LSTM, Dropout, TimeDistributed, BatchNormalization
+    Reshape, LSTM, Dropout, TimeDistributed, BatchNormalization, MaxPooling1D
 from keras.regularizers import l2
 from keras.optimizers import Adam
 import numpy as np
 
 
 def generate_models(
-        x_shape, number_of_classes, number_of_models=5, metrics=['accuracy'],
-        model_type=None,
+        x_shape, number_of_classes, number_of_models=5, model_type=None,
         cnn_min_layers=1, cnn_max_layers=10,
         cnn_min_filters=10, cnn_max_filters=100,
+        kernel_size = 3,
         cnn_min_fc_nodes=10, cnn_max_fc_nodes=2000,
         deepconvlstm_min_conv_layers=1, deepconvlstm_max_conv_layers=10,
         deepconvlstm_min_conv_filters=10, deepconvlstm_max_conv_filters=100,
@@ -48,9 +30,6 @@ def generate_models(
         Number of classes for classification task
     number_of_models : int
         Number of models to generate
-    metrics : list
-        Metrics to calculate on the validation set.
-        See https://keras.io/metrics/ for possible values.
     model_type : str, optional
         Type of model to build: 'CNN' or 'DeepConvLSTM'.
         Default option None generates both models.
@@ -62,6 +41,8 @@ def generate_models(
         minimum number of filters per Conv layer in CNN model
     cnn_max_filters : int
         maximum number of filters per Conv layer in CNN model
+    kernel_size : int
+        width of the kernel in a CNN model
     cnn_min_fc_nodes : int
         minimum number of hidden nodes per Dense layer in CNN model
     cnn_max_fc_nodes : int
@@ -113,6 +94,7 @@ def generate_models(
             hyperparameters = generate_CNN_hyperparameter_set(
                 min_layers=cnn_min_layers, max_layers=cnn_max_layers,
                 min_filters=cnn_min_filters, max_filters=cnn_max_filters,
+                kernel_size = kernel_size, 
                 min_fc_nodes=cnn_min_fc_nodes, max_fc_nodes=cnn_max_fc_nodes,
                 low_lr=low_lr, high_lr=high_lr, low_reg=low_reg,
                 high_reg=high_reg)
@@ -123,6 +105,7 @@ def generate_models(
                 max_conv_layers=deepconvlstm_max_conv_layers,
                 min_conv_filters=deepconvlstm_min_conv_filters,
                 max_conv_filters=deepconvlstm_max_conv_filters,
+                kernel_size = kernel_size, 
                 min_lstm_layers=deepconvlstm_min_lstm_layers,
                 max_lstm_layers=deepconvlstm_max_lstm_layers,
                 min_lstm_dims=deepconvlstm_min_lstm_dims,
@@ -130,14 +113,14 @@ def generate_models(
                 low_lr=low_lr, high_lr=high_lr, low_reg=low_reg,
                 high_reg=high_reg)
         models.append(
-            (generate_model(x_shape, number_of_classes, metrics=metrics, **hyperparameters),
+            (generate_model(x_shape, number_of_classes,  **hyperparameters ),
              hyperparameters, current_model_type))
     return models
 
 
 def generate_DeepConvLSTM_model(
         x_shape, class_number, filters, lstm_dims, learning_rate=0.01,
-        regularization_rate=0.01, metrics=['accuracy']):
+        regularization_rate=0.01, kernel_size = 3 ):
     """
     Generate a model with convolution and LSTM layers.
     See Ordonez et al., 2016, http://dx.doi.org/10.3390/s16010115
@@ -156,9 +139,8 @@ def generate_DeepConvLSTM_model(
         learning rate
     regularization_rate : float
         regularization rate
-    metrics : list
-        Metrics to calculate on the validation set.
-        See https://keras.io/metrics/ for possible values.
+    kernel_size: int
+        width of the kernel in a convolutional layer
 
     Returns
     -------
@@ -179,7 +161,7 @@ def generate_DeepConvLSTM_model(
         # filt: number of filters used in a layer
         # filters: vector of filt values
         model.add(
-            Convolution2D(filt, kernel_size=(3, 1), padding='same',
+            Convolution2D(filt, kernel_size=(kernel_size, 1), padding='same',
                           kernel_regularizer=l2(regularization_rate),
                           kernel_initializer=weightinit))
         model.add(BatchNormalization())
@@ -204,14 +186,13 @@ def generate_DeepConvLSTM_model(
 
     model.compile(loss='categorical_crossentropy',
                   optimizer=Adam(lr=learning_rate),
-                  metrics=metrics)
+                  metrics=['accuracy'])
 
     return model
 
 
 def generate_CNN_model(x_shape, class_number, filters, fc_hidden_nodes,
-                       learning_rate=0.01, regularization_rate=0.01,
-                       metrics=['accuracy']):
+                       learning_rate=0.01, regularization_rate=0.01, kernel_size = 3):
     """
     Generate a convolutional neural network (CNN) model.
 
@@ -231,10 +212,8 @@ def generate_CNN_model(x_shape, class_number, filters, fc_hidden_nodes,
         learning rate
     regularization_rate : float
         regularization rate
-    metrics : list
-        Metrics to calculate on the validation set.
-        See https://keras.io/metrics/ for possible values.
-
+    kernel_size : int
+        width of the kernel in a convolutional layer
     Returns
     -------
     model : Keras model
@@ -251,11 +230,12 @@ def generate_CNN_model(x_shape, class_number, filters, fc_hidden_nodes,
                 dim_length,
                 dim_channels)))
     for filter_number in filters:
-        model.add(Convolution1D(filter_number, kernel_size=3, padding='same',
+        model.add(Convolution1D(filter_number, kernel_size=kernel_size, padding='same',
                                 kernel_regularizer=l2(regularization_rate),
                                 kernel_initializer=weightinit))
         model.add(BatchNormalization())
         model.add(Activation('relu'))
+        model.add(MaxPooling1D(pool_size=(3), strides=None, padding='valid'))
     model.add(Flatten())
     model.add(Dense(units=fc_hidden_nodes,
                     kernel_regularizer=l2(regularization_rate),
@@ -267,7 +247,7 @@ def generate_CNN_model(x_shape, class_number, filters, fc_hidden_nodes,
 
     model.compile(loss='categorical_crossentropy',
                   optimizer=Adam(lr=learning_rate),
-                  metrics=metrics)
+                  metrics=['accuracy'], weighted_metrics=['accuracy'])
 
     return model
 
@@ -276,7 +256,7 @@ def generate_CNN_hyperparameter_set(min_layers=1, max_layers=10,
                                     min_filters=10, max_filters=100,
                                     min_fc_nodes=10, max_fc_nodes=2000,
                                     low_lr=1, high_lr=4, low_reg=1,
-                                    high_reg=4):
+                                    high_reg=4, kernel_size = 3):
     """ Generate a hyperparameter set that define a CNN model.
 
     Parameters
@@ -305,7 +285,8 @@ def generate_CNN_hyperparameter_set(min_layers=1, max_layers=10,
     high_reg : float
         maximum  of log range for regularization rate: regularization rate is
         sampled between `10**(-low_reg)` and `10**(-high_reg)`
-
+    kernel_size : int
+        width of the kernel in a convolutional layer
     Returns
     ----------
     hyperparameters : dict
@@ -318,6 +299,7 @@ def generate_CNN_hyperparameter_set(min_layers=1, max_layers=10,
         min_filters, max_filters + 1, number_of_layers)
     hyperparameters['fc_hidden_nodes'] = np.random.randint(
         min_fc_nodes, max_fc_nodes + 1)
+    hyperparameters['kernel_size'] = kernel_size
     return hyperparameters
 
 
@@ -326,7 +308,7 @@ def generate_DeepConvLSTM_hyperparameter_set(
         min_conv_filters=10, max_conv_filters=100,
         min_lstm_layers=1, max_lstm_layers=5,
         min_lstm_dims=10, max_lstm_dims=100,
-        low_lr=1, high_lr=4, low_reg=1, high_reg=4):
+        low_lr=1, high_lr=4, low_reg=1, high_reg=4, kernel_size =3):
     """ Generate a hyperparameter set that defines a DeepConvLSTM model.
 
     Parameters
@@ -359,7 +341,8 @@ def generate_DeepConvLSTM_hyperparameter_set(
     high_reg : float
         maximum  of log range for regularization rate: regularization rate is
         sampled between `10**(-low_reg)` and `10**(-high_reg)`
-
+    kernel_size : int
+        width of the kernel in a convolutional layer
     Returns
     ----------
     hyperparameters: dict
@@ -375,6 +358,7 @@ def generate_DeepConvLSTM_hyperparameter_set(
         min_lstm_layers, max_lstm_layers + 1)
     hyperparameters['lstm_dims'] = np.random.randint(
         min_lstm_dims, max_lstm_dims + 1, number_of_lstm_layers).tolist()
+    hyperparameters['kernel_size'] = kernel_size
     return hyperparameters
 
 
