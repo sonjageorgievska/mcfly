@@ -235,7 +235,7 @@ def generate_CNN_model(x_shape, class_number, filters, fc_hidden_nodes,
                                 kernel_initializer=weightinit))
         model.add(BatchNormalization())
         model.add(Activation('relu'))
-        model.add(MaxPooling1D(pool_size=(3), strides=None, padding='valid'))
+        #model.add(MaxPooling1D(pool_size=(3), strides=None, padding='valid'))
     model.add(Flatten())
     model.add(Dense(units=fc_hidden_nodes,
                     kernel_regularizer=l2(regularization_rate),
