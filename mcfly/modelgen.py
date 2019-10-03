@@ -191,6 +191,9 @@ def generate_DeepConvLSTM_model(
     return model
 
 
+
+
+
 def generate_CNN_model(x_shape, class_number, filters, fc_hidden_nodes,
                        learning_rate=0.01, regularization_rate=0.01, kernel_size = 3):
     """
@@ -247,7 +250,7 @@ def generate_CNN_model(x_shape, class_number, filters, fc_hidden_nodes,
 
     model.compile(loss='categorical_crossentropy',
                   optimizer=Adam(lr=learning_rate),
-                  metrics=['accuracy'], weighted_metrics=['accuracy'])
+                  metrics=['categorical_accuracy'])
 
     return model
 

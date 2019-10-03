@@ -23,7 +23,7 @@ from keras import metrics
 def train_models_on_samples(X_train, y_train, X_val, y_val, models, class_weight, 
                             nr_epochs=5, subset_size=100, verbose=True, outputfile=None,
                             model_path=None, early_stopping=False,
-                            batch_size=20, metric='accuracy'):
+                            batch_size=20, metric='categorical_accuracy'):
     """
     Given a list of compiled models, this function trains
     them all on a subset of the train data. If the given size of the subset is
